@@ -1,87 +1,62 @@
 #!/usr/bin/python3
-from bs4 import BeautifulSoup
+
 import requests
-import sys
-from PIL import Image
-import urllib
-from operator import itemgetter
-import pytesseract as tess
+import cv2
+import numpy as np
+
+try:
+    from PIL import Image
+except ImportError:
+    import Image
+import pytesseract
 
 
-success_votes = 0
-error_cases = 0
-user_id = 3344
-number_print = 1024
-url = "http://158.69.76.135/level5.php"
-header = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
-     AppleWebKit/537.36 (KHTML, like Gecko)\
-     Chrome/91.0.4501.0 Safari/537.36 Edg/91.0.866.0',
-    'Referer': url
-}
-cookies_page = requests.session()
-cookies_page.headers.update(header)
-flag = 0
+# level 5
 
 
-def decoding_the_captcha(captcha, l1=7):
-    """Method to clean black dots and set to 808080"""
-    im = Image.open(captcha)
-    im = im.convert("RGB")
-    p1 = im.load()
+def send_votes(id, times):
+    url = 'http://158.69.76.135/level5.php'
+    captcha_url = 'http://158.69.76.135/tim.php'
+    string_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0'
 
-    # Filtering the black dots
-    for x in range(im.size[0]):
-        for y in range(im.size[1]):
-            if (p1[x, y][0] < l1) and (p1[x, y][1] < l1) \
-             and (p1[x, y][2] < l1):
-                p1[x, y] = (0x80, 0x80, 0x80, 255)
+    for i in range(times):
 
-    im.save("output.png")
-    im.close()
+        with requests.Session() as s:
+            r = s.get(url, headers={'User-Agent': string_agent})
+            i = s.get(captcha_url, headers={'User-Agent': string_agent, 'referer': url})
+            with open('tim.png', 'wb') as image_file:
+                image_file.write(i.content)
+            captcha_string = translate_image('tim.png')
+            print(captcha_string)
+            c = r.cookies
+            key_form = ""
+            for cookie in c:
+                if cookie.name == 'HoldTheDoor':
+                    key_form = cookie.value
+                    break
 
-for i in range(0, number_print):
-    r = cookies_page.get(url)
-    soup = BeautifulSoup(r.text, "html")
-    key_value = soup.find('form').find('input', {'name': 'key'})['value']
+            s.post(url, data={'id': id, 'holdthedoor': 'Enviar', 'key': key_form, 'captcha': captcha_string},
+                   headers={'User-Agent': string_agent, 'referer': url},
+                   cookies=c)
 
-    captcha_url = "http://158.69.76.135/tim.php"
-    captcha_image = cookies_page.get(captcha_url)
-    file = open("captcha_image.png", "wb")
-    file.write(cookies_page.get(captcha_url).content)
-    file.close()
 
-    decoding_the_captcha("captcha_image.png")
+def clean_image(file):
+    img = cv2.imread(file, 0)
 
-    captcha_text = tess.image_to_string("output.png")[:8]
-    print("captcha = '{}'".format(captcha_text))
-    flag = 0
-    for n in captcha_text:
-        if n == " " or n == "\n" or n == "\t":
-            print("fail captcha reading'{}'".format(captcha_text))
-            flag = 1
+    kernel = np.ones((2, 2), np.uint8)
 
-    # if reading captcha is success: flag is equal to 0
-    if flag == 0:
-        print("Hacking captcha in progress '{}'".format(captcha_text))
-        votation = {'id': user_id, 'holdthedoor': 'Submit',
-                    'key': key_value, 'captcha': captcha_text}
-        vote = cookies_page.post(url, data=votation)
+    img_dilation = cv2.dilate(img, kernel, iterations=1)
+    img_erosion = cv2.erode(img_dilation, kernel, iterations=1)
 
-        if vote.status_code == 200:
-            success_votes += 1
-            print("Success: ", success_votes)
-            print("Total success cases until now: {}".format(i))
-        else:
-            error_cases += 1
-            success_votes -= 1
-            i -= 1
-    else:
-        i -= 1
+    cv2.imwrite('input.png', img)
+    cv2.imwrite('erosion.png', img_erosion)
+    cv2.imwrite('dilation.png', img_dilation)
 
-print("-------------------")
-print("print success: {}".format(success_votes))
-print("error_cases: {}".format(error_cases), file=sys.stderr)
-print("-------------------")
-if error_cases == 0:
-    print("Success operation: 100% of {} votes".format(success_votes))
+
+def translate_image(file):
+    clean_image(file)
+    captcha_string = pytesseract.image_to_string(Image.open('dilation.png'))
+    return captcha_string
+
+
+send_votes(867, 1)
