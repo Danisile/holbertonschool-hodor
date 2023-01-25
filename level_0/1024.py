@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # 1024.py
-# Danisile Jiyane <4502@holbertonschool.com>
+# Danisile Jiyane <Danisilejiyane2@gmail.com>
 """Hodor with my Holberton ID 1024 times."""
 import requests
 
