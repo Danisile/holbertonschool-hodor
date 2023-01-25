@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # 4096.py
-# Thato Khosa <4502@holbertonschool.com>
+# Danisile Jiyane<4502@holbertonschool.com>
 """Hodor with my Holberton ID 4096 times."""
 import requests
 from bs4 import BeautifulSoup
