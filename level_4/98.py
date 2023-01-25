@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # 98.py
-# Thato Khosa <4502@holbertonschool.com>
+# Danisile Jiyane <danisilejiyane2@gmail.com>
 """Hodor with my Holberton ID 98 times."""
 import requests
 from bs4 import BeautifulSoup
